@@ -119,10 +119,38 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
   const [fontFamily, setFontFamily] = useState<string>("Inter")
   const [headerFontFamily, setHeaderFontFamily] = useState<string>("Inter")
   const [previewOnly, setPreviewOnly] = useState<boolean>(false)
+  
+  // Undo/Redo history
+  const [history, setHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState<number>(-1)
 
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const previewRef = useRef<HTMLDivElement>(null)
   const renderRef = useRef<HTMLDivElement>(null)
+  const historyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Add to history when content changes (for undo/redo)
+  const addToHistory = (newContent: string) => {
+    // Remove any history after current index
+    const newHistory = history.slice(0, historyIndex + 1)
+    newHistory.push(newContent)
+    
+    // Keep only last 50 items
+    if (newHistory.length > 50) {
+      newHistory.shift()
+    }
+    
+    setHistory(newHistory)
+    setHistoryIndex(newHistory.length - 1)
+  }
+
+  // Initialize history with initial content
+  useEffect(() => {
+    if (history.length === 0) {
+      setHistory([content])
+      setHistoryIndex(0)
+    }
+  }, [])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -135,11 +163,19 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
         e.preventDefault()
         handleBold()
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault()
+        handleUndo()
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault()
+        handleRedo()
+      }
     }
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [content])
+  }, [content, history, historyIndex])
 
   const applyPreset = (presetName: string) => {
     const preset = PRESETS[presetName as keyof typeof PRESETS]
@@ -153,6 +189,22 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
       setHighlightColor(preset.highlightColor)
       setFontFamily(preset.fontFamily)
       setHeaderFontFamily(preset.headerFontFamily)
+    }
+  }
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1
+      setHistoryIndex(newIndex)
+      setContent(history[newIndex])
+    }
+  }
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1
+      setHistoryIndex(newIndex)
+      setContent(history[newIndex])
     }
   }
 
@@ -178,6 +230,7 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
 
     const newContent = beforeText + highlightedText + afterText
     setContent(newContent)
+    addToHistory(newContent)
 
     // Reset cursor position
     setTimeout(() => {
@@ -208,6 +261,7 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
 
     const newContent = beforeText + boldText + afterText
     setContent(newContent)
+    addToHistory(newContent)
 
     // Reset cursor position
     setTimeout(() => {
@@ -458,7 +512,18 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
             <textarea
               ref={editorRef}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value
+                setContent(newValue)
+                
+                // Debounce history updates for typing
+                if (historyTimeoutRef.current) {
+                  clearTimeout(historyTimeoutRef.current)
+                }
+                historyTimeoutRef.current = setTimeout(() => {
+                  addToHistory(newValue)
+                }, 500)
+              }}
               className="flex-1 w-full p-4 border border-stone-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
               placeholder={
                 isMarkdown ? "Type or paste your markdown content here..." : "Type or paste your content here..."
@@ -467,7 +532,7 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
 
             <div className="mt-4 text-xs text-stone-500">
               <p className="mb-1">
-                <strong>Keyboard shortcuts:</strong> ⌘H to highlight, ⌘B to bold
+                <strong>Keyboard shortcuts:</strong> ⌘H to highlight, ⌘B to bold, ⌘Z to undo, ⌘Y to redo
               </p>
               {isMarkdown ? (
                 <p>
