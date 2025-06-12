@@ -303,7 +303,8 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
         
         // Add some default styling to lists for better spacing
         processed = processed.replace(/<ul>/g, '<ul style="margin: 0.5em 0; padding-left: 2em; list-style-position: outside;">')
-        processed = processed.replace(/<ol>/g, '<ol style="margin: 0.5em 0; padding-left: 2em; list-style-position: outside; list-style-type: decimal;">')
+        // Preserve start attribute for ordered lists
+        processed = processed.replace(/<ol(\s+start=["']?\d+["']?)?>/g, '<ol$1 style="margin: 0.5em 0; padding-left: 2em; list-style-position: outside; list-style-type: decimal;">')
         processed = processed.replace(/<li>/g, '<li style="margin: 0.25em 0;">')
       } catch (error) {
         console.error("Markdown parsing error:", error)
