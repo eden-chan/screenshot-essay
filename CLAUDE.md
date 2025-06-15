@@ -5,12 +5,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Development
+
 - `npm run dev` - Start the development server (Next.js)
 - `npm run build` - Build the application for production
 - `npm run start` - Start the production server
 - `npm run lint` - Run Next.js linting
+- `npm run format` - Format all files with Prettier
+- `npm run format:check` - Check formatting without making changes
 
 ### Dependencies
+
 - `npm install --legacy-peer-deps` - Install all dependencies (use legacy-peer-deps due to React 19)
 
 ## Architecture Overview
@@ -20,6 +24,7 @@ This is a Next.js 15.2.4 application that serves as a **Screenshot Text Editor**
 ### Core Features
 
 1. **Main Editor Component** (`app/page.tsx`):
+
    - Dual editor modes: Markdown and HTML
    - Real-time preview with custom markdown renderer
    - Undo/redo functionality with history management
@@ -27,18 +32,21 @@ This is a Next.js 15.2.4 application that serves as a **Screenshot Text Editor**
    - Preview-only mode for distraction-free viewing
 
 2. **Export System**:
+
    - Uses `modern-screenshot` library for accurate PNG generation
    - Primary action: Copy to clipboard
    - Secondary action: Download as PNG file
    - Visual feedback with checkmark when copied
 
 3. **Markdown Processing**:
-   - Custom highlight syntax: `===text===` 
+
+   - Custom highlight syntax: `===text===`
    - Standard markdown features (bold, headers, lists, blockquotes)
    - Support for ordered lists with custom starting numbers
    - Keyboard shortcuts (⌘H for highlight, ⌘B for bold, ⌘Z/⌘Y for undo/redo)
 
 4. **Typography System**:
+
    - Dual font system: separate fonts for body and headers/bold text
    - 26 font options including serif, sans-serif, and modern aesthetic fonts
    - Dynamic font size (12-32px) and line height (1.0-2.0)

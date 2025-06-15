@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
+import { Card } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Download, Highlighter, Palette, Type, Layout, FileText, Bold, Eye, EyeOff, Copy, Check } from "lucide-react"
 import { domToPng, domToBlob } from "modern-screenshot"
 import { marked } from "marked"
@@ -25,7 +27,7 @@ const FONT_FAMILIES = {
   "Open Sans": '"Open Sans", sans-serif',
   Lato: '"Lato", sans-serif',
   // Serif fonts for essays
-  Georgia: 'Georgia, serif',
+  Georgia: "Georgia, serif",
   "Times New Roman": '"Times New Roman", Times, serif',
   Garamond: 'Garamond, "EB Garamond", serif',
   "Playfair Display": '"Playfair Display", Georgia, serif',
@@ -34,11 +36,11 @@ const FONT_FAMILIES = {
   "Crimson Text": '"Crimson Text", Georgia, serif',
   // Modern aesthetic fonts
   "DM Sans": '"DM Sans", sans-serif',
-  "Outfit": '"Outfit", sans-serif',
-  "Manrope": '"Manrope", sans-serif',
-  "Sora": '"Sora", sans-serif',
+  Outfit: '"Outfit", sans-serif',
+  Manrope: '"Manrope", sans-serif',
+  Sora: '"Sora", sans-serif',
   "Space Grotesk": '"Space Grotesk", sans-serif',
-  "Karla": '"Karla", sans-serif',
+  Karla: '"Karla", sans-serif',
   "Libre Baskerville": '"Libre Baskerville", Georgia, serif',
   "Cormorant Garamond": '"Cormorant Garamond", Garamond, serif',
 }
@@ -122,7 +124,7 @@ const PRESETS = {
     fontFamily: "Merriweather",
     headerFontFamily: "Crimson Text",
   },
-  "Poetry": {
+  Poetry: {
     width: 480,
     padding: 64,
     fontSize: 20,
@@ -155,7 +157,7 @@ const PRESETS = {
     fontFamily: "Manrope",
     headerFontFamily: "Space Grotesk",
   },
-  "Newsletter": {
+  Newsletter: {
     width: 560,
     padding: 32,
     fontSize: 15,
@@ -177,7 +179,7 @@ const PRESETS = {
     fontFamily: "Georgia",
     headerFontFamily: "Playfair Display",
   },
-  "Philosophy": {
+  Philosophy: {
     width: 620,
     padding: 52,
     fontSize: 19,
@@ -256,7 +258,8 @@ But therein lies the magic: ===in surrendering to the process, we often discover
   const [headerFontFamily, setHeaderFontFamily] = useState<string>("Inter")
   const [previewOnly, setPreviewOnly] = useState<boolean>(false)
   const [copied, setCopied] = useState<boolean>(false)
-  
+  const [selectedPreset, setSelectedPreset] = useState<string>("")
+
   // Undo/Redo history
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState<number>(-1)
@@ -271,12 +274,12 @@ But therein lies the magic: ===in surrendering to the process, we often discover
     // Remove any history after current index
     const newHistory = history.slice(0, historyIndex + 1)
     newHistory.push(newContent)
-    
+
     // Keep only last 50 items
     if (newHistory.length > 50) {
       newHistory.shift()
     }
-    
+
     setHistory(newHistory)
     setHistoryIndex(newHistory.length - 1)
   }
@@ -326,6 +329,7 @@ But therein lies the magic: ===in surrendering to the process, we often discover
       setHighlightColor(preset.highlightColor)
       setFontFamily(preset.fontFamily)
       setHeaderFontFamily(preset.headerFontFamily)
+      setSelectedPreset(presetName)
     }
   }
 
@@ -409,8 +413,8 @@ But therein lies the magic: ===in surrendering to the process, we often discover
 
   const processContent = (text: string) => {
     // First, convert literal \n to actual newlines
-    let processedText = text.replace(/\\n/g, '\n')
-    
+    let processedText = text.replace(/\\n/g, "\n")
+
     if (isMarkdown) {
       // Process custom highlight syntax first
       let processed = processedText.replace(
@@ -422,26 +426,32 @@ But therein lies the magic: ===in surrendering to the process, we often discover
       try {
         marked.setOptions({
           breaks: true, // This makes marked respect single line breaks
-          gfm: true,    // GitHub Flavored Markdown
+          gfm: true, // GitHub Flavored Markdown
           pedantic: false,
         })
         processed = marked(processed) as string
-        
+
         // Apply header font family to h1-h6 tags
         const headerFont = FONT_FAMILIES[headerFontFamily as keyof typeof FONT_FAMILIES]
         processed = processed.replace(/<h([1-6])>/g, `<h$1 style="font-family: ${headerFont};">`)
-        
+
         // Apply header font family to strong/bold tags (use global flag to replace all occurrences)
         processed = processed.replace(/<strong>/g, `<strong style="font-family: ${headerFont};">`)
-        
+
         // Ensure empty lines create visible spacing
         processed = processed.replace(/<\/p>\s*<p>/g, '</p><p style="margin-top: 1em;">')
         processed = processed.replace(/<br>\s*<br>/g, '<br><div style="height: 1em;"></div>')
-        
+
         // Add some default styling to lists for better spacing
-        processed = processed.replace(/<ul>/g, '<ul style="margin: 0.5em 0; padding-left: 2em; list-style-position: outside;">')
+        processed = processed.replace(
+          /<ul>/g,
+          '<ul style="margin: 0.5em 0; padding-left: 2em; list-style-position: outside;">',
+        )
         // Preserve start attribute for ordered lists
-        processed = processed.replace(/<ol(\s+start=["']?\d+["']?)?>/g, '<ol$1 style="margin: 0.5em 0; padding-left: 2em; list-style-position: outside; list-style-type: decimal;">')
+        processed = processed.replace(
+          /<ol(\s+start=["']?\d+["']?)?>/g,
+          '<ol$1 style="margin: 0.5em 0; padding-left: 2em; list-style-position: outside; list-style-type: decimal;">',
+        )
         processed = processed.replace(/<li>/g, '<li style="margin: 0.25em 0;">')
       } catch (error) {
         console.error("Markdown parsing error:", error)
@@ -452,49 +462,49 @@ But therein lies the magic: ===in surrendering to the process, we often discover
     } else {
       // For non-markdown, replace double newlines with spacing, single newlines with br
       let processed = processedText.replace(/\n\n/g, '<br><div style="height: 1em;"></div>').replace(/\n/g, "<br>")
-      
+
       // Apply header font family to strong tags in HTML mode
       const headerFont = FONT_FAMILIES[headerFontFamily as keyof typeof FONT_FAMILIES]
       processed = processed.replace(/<strong>/g, `<strong style="font-family: ${headerFont};">`)
-      
+
       return processed
     }
   }
 
-  const handleExport = async (action: 'copy' | 'download' = 'copy') => {
+  const handleExport = async (action: "copy" | "download" = "copy") => {
     if (!renderRef.current) return
 
     try {
       // Small delay to ensure everything is rendered
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       // modern-screenshot options for better quality
       const options = {
         quality: 0.95,
         scale: 2,
         backgroundColor: bgColor,
         style: {
-          borderRadius: '0',
-          boxShadow: 'none',
-        }
+          borderRadius: "0",
+          boxShadow: "none",
+        },
       }
 
-      if (action === 'copy') {
+      if (action === "copy") {
         // Generate blob for clipboard
         const blob = await domToBlob(renderRef.current, options)
         if (blob) {
           try {
             await navigator.clipboard.write([
               new ClipboardItem({
-                'image/png': blob
-              })
+                "image/png": blob,
+              }),
             ])
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
           } catch (err) {
             console.error("Failed to copy image to clipboard:", err)
             // Fallback to download if copy fails
-            handleExport('download')
+            handleExport("download")
           }
         }
       } else {
@@ -515,31 +525,31 @@ But therein lies the magic: ===in surrendering to the process, we often discover
     return (
       <div className="min-h-screen bg-stone-100 p-6">
         <style jsx global>{`
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
-          
+          @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+          @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+          @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap");
+          @import url("https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap");
+          @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
+          @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap");
+          @import url("https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap");
+
           @font-face {
-            font-family: 'Eudoxus Sans';
-            src: url('https://fonts.cdnfonts.com/s/19990/EudoxusSans-Regular.woff') format('woff');
+            font-family: "Eudoxus Sans";
+            src: url("https://fonts.cdnfonts.com/s/19990/EudoxusSans-Regular.woff") format("woff");
             font-weight: 400;
             font-style: normal;
           }
-          
+
           @font-face {
-            font-family: 'Eudoxus Sans Bold';
-            src: url('https://fonts.cdnfonts.com/s/19990/EudoxusSans-Bold.woff') format('woff');
+            font-family: "Eudoxus Sans Bold";
+            src: url("https://fonts.cdnfonts.com/s/19990/EudoxusSans-Bold.woff") format("woff");
             font-weight: 700;
             font-style: normal;
           }
-          
+
           @font-face {
-            font-family: 'Eudoxus Sans';
-            src: url('https://fonts.cdnfonts.com/s/19990/EudoxusSans-Bold.woff') format('woff');
+            font-family: "Eudoxus Sans";
+            src: url("https://fonts.cdnfonts.com/s/19990/EudoxusSans-Bold.woff") format("woff");
             font-weight: 700;
             font-style: normal;
           }
@@ -584,43 +594,43 @@ But therein lies the magic: ===in surrendering to the process, we often discover
   return (
     <div className="min-h-screen bg-stone-50">
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap');
-        
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap");
+
         @font-face {
-          font-family: 'Eudoxus Sans';
-          src: url('https://fonts.cdnfonts.com/s/19990/EudoxusSans-Regular.woff') format('woff');
+          font-family: "Eudoxus Sans";
+          src: url("https://fonts.cdnfonts.com/s/19990/EudoxusSans-Regular.woff") format("woff");
           font-weight: 400;
           font-style: normal;
         }
-        
+
         @font-face {
-          font-family: 'Eudoxus Sans Bold';
-          src: url('https://fonts.cdnfonts.com/s/19990/EudoxusSans-Bold.woff') format('woff');
+          font-family: "Eudoxus Sans Bold";
+          src: url("https://fonts.cdnfonts.com/s/19990/EudoxusSans-Bold.woff") format("woff");
           font-weight: 700;
           font-style: normal;
         }
-        
+
         @font-face {
-          font-family: 'Eudoxus Sans';
-          src: url('https://fonts.cdnfonts.com/s/19990/EudoxusSans-Bold.woff') format('woff');
+          font-family: "Eudoxus Sans";
+          src: url("https://fonts.cdnfonts.com/s/19990/EudoxusSans-Bold.woff") format("woff");
           font-weight: 700;
           font-style: normal;
         }
@@ -661,7 +671,7 @@ But therein lies the magic: ===in surrendering to the process, we often discover
               onChange={(e) => {
                 const newValue = e.target.value
                 setContent(newValue)
-                
+
                 // Debounce history updates for typing
                 if (historyTimeoutRef.current) {
                   clearTimeout(historyTimeoutRef.current)
@@ -709,21 +719,258 @@ But therein lies the magic: ===in surrendering to the process, we often discover
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Presets */}
+              {/* Presets Gallery */}
               <div className="col-span-2">
-                <Label className="text-sm font-medium mb-2 block">Presets</Label>
-                <Select onValueChange={applyPreset}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a preset" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(PRESETS).map((preset) => (
-                      <SelectItem key={preset} value={preset}>
-                        {preset}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-sm font-medium mb-3 block">Presets</Label>
+                <ScrollArea className="h-[320px] w-full rounded-md border bg-muted/20">
+                  <div className="p-4 space-y-4">
+                    {/* Social Media Presets */}
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-2">SOCIAL MEDIA</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(PRESETS)
+                          .filter(([name]) => ["Twitter Post", "Instagram Story", "LinkedIn Post"].includes(name))
+                          .map(([presetName, preset]) => (
+                            <Card
+                              key={presetName}
+                              className={`cursor-pointer hover:shadow-lg transition-all p-3 ${
+                                selectedPreset === presetName ? "ring-2 ring-primary shadow-lg" : ""
+                              }`}
+                              onClick={() => applyPreset(presetName)}
+                            >
+                              {/* Mini preview */}
+                              <div
+                                className="w-full h-28 rounded-md mb-2 overflow-hidden relative border"
+                                style={{
+                                  backgroundColor: preset.bgColor,
+                                  fontSize: "9px",
+                                  padding: "10px",
+                                  fontFamily: FONT_FAMILIES[preset.fontFamily as keyof typeof FONT_FAMILIES],
+                                }}
+                              >
+                                <div style={{ color: preset.textColor }}>
+                                  <div
+                                    style={{
+                                      fontFamily: FONT_FAMILIES[preset.headerFontFamily as keyof typeof FONT_FAMILIES],
+                                      fontWeight: "bold",
+                                      fontSize: "11px",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    {presetName.includes("Quote") ? '"Be yourself"' : "Title Text"}
+                                  </div>
+                                  <div style={{ lineHeight: preset.lineHeight, fontSize: "8px" }}>
+                                    {presetName.includes("Poetry") ? (
+                                      <>
+                                        Roses are red
+                                        <br />
+                                        Violets are{" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          blue
+                                        </span>
+                                      </>
+                                    ) : presetName.includes("Tech") ? (
+                                      <>
+                                        const life ={" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          42
+                                        </span>
+                                        ;
+                                      </>
+                                    ) : (
+                                      <>
+                                        Lorem ipsum{" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          dolor
+                                        </span>{" "}
+                                        sit amet
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-xs font-semibold">{presetName}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <span
+                                  className="inline-block w-3 h-3 rounded-full border"
+                                  style={{ backgroundColor: preset.highlightColor }}
+                                ></span>
+                                {preset.width}px
+                              </div>
+                            </Card>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Essay & Literary Presets */}
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-2">ESSAYS & LITERARY</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(PRESETS)
+                          .filter(([name]) =>
+                            ["Literary Essay", "Academic Paper", "Poetry", "Philosophy", "Quote Card"].includes(name),
+                          )
+                          .map(([presetName, preset]) => (
+                            <Card
+                              key={presetName}
+                              className={`cursor-pointer hover:shadow-lg transition-all p-3 ${
+                                selectedPreset === presetName ? "ring-2 ring-primary shadow-lg" : ""
+                              }`}
+                              onClick={() => applyPreset(presetName)}
+                            >
+                              {/* Mini preview */}
+                              <div
+                                className="w-full h-28 rounded-md mb-2 overflow-hidden relative border"
+                                style={{
+                                  backgroundColor: preset.bgColor,
+                                  fontSize: "9px",
+                                  padding: "10px",
+                                  fontFamily: FONT_FAMILIES[preset.fontFamily as keyof typeof FONT_FAMILIES],
+                                }}
+                              >
+                                <div style={{ color: preset.textColor }}>
+                                  <div
+                                    style={{
+                                      fontFamily: FONT_FAMILIES[preset.headerFontFamily as keyof typeof FONT_FAMILIES],
+                                      fontWeight: "bold",
+                                      fontSize: "11px",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    {presetName.includes("Quote") ? '"Be yourself"' : "Title Text"}
+                                  </div>
+                                  <div style={{ lineHeight: preset.lineHeight, fontSize: "8px" }}>
+                                    {presetName.includes("Poetry") ? (
+                                      <>
+                                        Roses are red
+                                        <br />
+                                        Violets are{" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          blue
+                                        </span>
+                                      </>
+                                    ) : presetName.includes("Tech") ? (
+                                      <>
+                                        const life ={" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          42
+                                        </span>
+                                        ;
+                                      </>
+                                    ) : (
+                                      <>
+                                        Lorem ipsum{" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          dolor
+                                        </span>{" "}
+                                        sit amet
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-xs font-semibold">{presetName}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <span
+                                  className="inline-block w-3 h-3 rounded-full border"
+                                  style={{ backgroundColor: preset.highlightColor }}
+                                ></span>
+                                {preset.width}px
+                              </div>
+                            </Card>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Modern & Blog Presets */}
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-2">MODERN & BLOG</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(PRESETS)
+                          .filter(([name]) =>
+                            [
+                              "Modern Blog",
+                              "Startup Pitch",
+                              "Newsletter",
+                              "Tech Article",
+                              "Notion Style",
+                              "Blog Header",
+                              "Minimal",
+                            ].includes(name),
+                          )
+                          .map(([presetName, preset]) => (
+                            <Card
+                              key={presetName}
+                              className={`cursor-pointer hover:shadow-lg transition-all p-3 ${
+                                selectedPreset === presetName ? "ring-2 ring-primary shadow-lg" : ""
+                              }`}
+                              onClick={() => applyPreset(presetName)}
+                            >
+                              {/* Mini preview */}
+                              <div
+                                className="w-full h-28 rounded-md mb-2 overflow-hidden relative border"
+                                style={{
+                                  backgroundColor: preset.bgColor,
+                                  fontSize: "9px",
+                                  padding: "10px",
+                                  fontFamily: FONT_FAMILIES[preset.fontFamily as keyof typeof FONT_FAMILIES],
+                                }}
+                              >
+                                <div style={{ color: preset.textColor }}>
+                                  <div
+                                    style={{
+                                      fontFamily: FONT_FAMILIES[preset.headerFontFamily as keyof typeof FONT_FAMILIES],
+                                      fontWeight: "bold",
+                                      fontSize: "11px",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    {presetName.includes("Quote") ? '"Be yourself"' : "Title Text"}
+                                  </div>
+                                  <div style={{ lineHeight: preset.lineHeight, fontSize: "8px" }}>
+                                    {presetName.includes("Poetry") ? (
+                                      <>
+                                        Roses are red
+                                        <br />
+                                        Violets are{" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          blue
+                                        </span>
+                                      </>
+                                    ) : presetName.includes("Tech") ? (
+                                      <>
+                                        const life ={" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          42
+                                        </span>
+                                        ;
+                                      </>
+                                    ) : (
+                                      <>
+                                        Lorem ipsum{" "}
+                                        <span style={{ backgroundColor: preset.highlightColor, padding: "0 2px" }}>
+                                          dolor
+                                        </span>{" "}
+                                        sit amet
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-xs font-semibold">{presetName}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <span
+                                  className="inline-block w-3 h-3 rounded-full border"
+                                  style={{ backgroundColor: preset.highlightColor }}
+                                ></span>
+                                {preset.width}px
+                              </div>
+                            </Card>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
               </div>
 
               {/* Body Font Family */}
@@ -880,8 +1127,8 @@ But therein lies the magic: ===in surrendering to the process, we often discover
               </div>
 
               <div className="col-span-2 space-y-2">
-                <Button 
-                  onClick={() => handleExport('copy')} 
+                <Button
+                  onClick={() => handleExport("copy")}
                   className="w-full flex items-center justify-center gap-2"
                   variant={copied ? "outline" : "default"}
                 >
@@ -897,8 +1144,8 @@ But therein lies the magic: ===in surrendering to the process, we often discover
                     </>
                   )}
                 </Button>
-                <Button 
-                  onClick={() => handleExport('download')} 
+                <Button
+                  onClick={() => handleExport("download")}
                   variant="outline"
                   className="w-full flex items-center justify-center gap-2"
                 >
