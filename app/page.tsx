@@ -6,11 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import { Download, Highlighter, Palette, Type, Layout, FileText, Bold, Eye, EyeOff } from "lucide-react"
-import html2canvas from "html2canvas"
+import { Download, Highlighter, Palette, Type, Layout, FileText, Bold, Eye, EyeOff, Copy, Check } from "lucide-react"
+import { domToPng, domToBlob } from "modern-screenshot"
 import { marked } from "marked"
 
 const FONT_FAMILIES = {
+  // Sans-serif fonts
   Inter: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   "Eudoxus Sans": '"Eudoxus Sans", "Eudoxus Sans Bold", -apple-system, BlinkMacSystemFont, sans-serif',
   "SF Pro Display": '"SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -23,6 +24,23 @@ const FONT_FAMILIES = {
   Roboto: '"Roboto", sans-serif',
   "Open Sans": '"Open Sans", sans-serif',
   Lato: '"Lato", sans-serif',
+  // Serif fonts for essays
+  Georgia: 'Georgia, serif',
+  "Times New Roman": '"Times New Roman", Times, serif',
+  Garamond: 'Garamond, "EB Garamond", serif',
+  "Playfair Display": '"Playfair Display", Georgia, serif',
+  Merriweather: '"Merriweather", Georgia, serif',
+  Lora: '"Lora", Georgia, serif',
+  "Crimson Text": '"Crimson Text", Georgia, serif',
+  // Modern aesthetic fonts
+  "DM Sans": '"DM Sans", sans-serif',
+  "Outfit": '"Outfit", sans-serif',
+  "Manrope": '"Manrope", sans-serif',
+  "Sora": '"Sora", sans-serif',
+  "Space Grotesk": '"Space Grotesk", sans-serif',
+  "Karla": '"Karla", sans-serif',
+  "Libre Baskerville": '"Libre Baskerville", Georgia, serif',
+  "Cormorant Garamond": '"Cormorant Garamond", Garamond, serif',
 }
 
 const PRESETS = {
@@ -81,32 +99,150 @@ const PRESETS = {
     fontFamily: "Helvetica Neue",
     headerFontFamily: "Helvetica Neue",
   },
+  // New aesthetic presets
+  "Literary Essay": {
+    width: 700,
+    padding: 56,
+    fontSize: 18,
+    lineHeight: 1.8,
+    bgColor: "#faf8f5",
+    textColor: "#2c2c2c",
+    highlightColor: "#f0e6d2",
+    fontFamily: "Lora",
+    headerFontFamily: "Playfair Display",
+  },
+  "Academic Paper": {
+    width: 650,
+    padding: 48,
+    fontSize: 16,
+    lineHeight: 1.7,
+    bgColor: "#ffffff",
+    textColor: "#1a1a1a",
+    highlightColor: "#e8f4fd",
+    fontFamily: "Merriweather",
+    headerFontFamily: "Crimson Text",
+  },
+  "Poetry": {
+    width: 480,
+    padding: 64,
+    fontSize: 20,
+    lineHeight: 1.9,
+    bgColor: "#f5f3f0",
+    textColor: "#3a3a3a",
+    highlightColor: "#f5e1d3",
+    fontFamily: "Cormorant Garamond",
+    headerFontFamily: "Libre Baskerville",
+  },
+  "Modern Blog": {
+    width: 680,
+    padding: 40,
+    fontSize: 17,
+    lineHeight: 1.65,
+    bgColor: "#fafafa",
+    textColor: "#1f2937",
+    highlightColor: "#c7d2fe",
+    fontFamily: "DM Sans",
+    headerFontFamily: "Outfit",
+  },
+  "Startup Pitch": {
+    width: 600,
+    padding: 36,
+    fontSize: 16,
+    lineHeight: 1.55,
+    bgColor: "#0a0a0a",
+    textColor: "#fafafa",
+    highlightColor: "#3b82f6",
+    fontFamily: "Manrope",
+    headerFontFamily: "Space Grotesk",
+  },
+  "Newsletter": {
+    width: 560,
+    padding: 32,
+    fontSize: 15,
+    lineHeight: 1.6,
+    bgColor: "#f8f7ff",
+    textColor: "#2d3748",
+    highlightColor: "#b794f4",
+    fontFamily: "Karla",
+    headerFontFamily: "Sora",
+  },
+  "Quote Card": {
+    width: 500,
+    padding: 48,
+    fontSize: 22,
+    lineHeight: 1.6,
+    bgColor: "#1e293b",
+    textColor: "#f1f5f9",
+    highlightColor: "#fbbf24",
+    fontFamily: "Georgia",
+    headerFontFamily: "Playfair Display",
+  },
+  "Philosophy": {
+    width: 620,
+    padding: 52,
+    fontSize: 19,
+    lineHeight: 1.75,
+    bgColor: "#fcfbf8",
+    textColor: "#2b2b2b",
+    highlightColor: "#d4a574",
+    fontFamily: "Crimson Text",
+    headerFontFamily: "Cormorant Garamond",
+  },
+  "Tech Article": {
+    width: 720,
+    padding: 44,
+    fontSize: 16,
+    lineHeight: 1.6,
+    bgColor: "#0f172a",
+    textColor: "#e2e8f0",
+    highlightColor: "#22d3ee",
+    fontFamily: "Inter",
+    headerFontFamily: "Space Grotesk",
+  },
+  "Notion Style": {
+    width: 640,
+    padding: 36,
+    fontSize: 16,
+    lineHeight: 1.5,
+    bgColor: "#ffffff",
+    textColor: "#37352f",
+    highlightColor: "#fdecc8",
+    fontFamily: "Inter",
+    headerFontFamily: "Inter",
+  },
 }
 
 export default function HighlightEditor() {
-  const [content, setContent] = useState<string>(`# The Future of AI Development: Key Insights
+  const [content, setContent] = useState<string>(`# On the Nature of Creativity
 
-## 1. The Demand for AI-Native Developer Tools is Exploding
+## The Paradox of Constraint
 
-The rapid scaling of companies like **Cursor** proves there is a massive, unmet need for development environments built from the ground up with AI at their core, not just as a plugin.
+The most profound creative breakthroughs often emerge not from ===limitless freedom, but from embracing constraints===. When we restrict our options, we force our minds to explore deeper within narrower boundaries.
 
-**Key points:**
-- Massive unmet demand for AI-native tools
-- Traditional IDEs with AI plugins aren't enough
-- Purpose-built solutions win
+**Consider the haiku:** seventeen syllables that can capture the entire universe. Or the sonnet: fourteen lines that have expressed humanity's deepest loves and losses for centuries.
 
-## 2. AI Progress Isn't a Slope, It's a Staircase
+## The Architecture of Ideas
 
-The jump from one model generation to the next isn't just an incremental improvement. It's a *step-function* change that unlocks entirely new categories of capabilities.
+Ideas are not born in isolation. They are ===constructed from the collision of existing thoughts===, experiences, and observations. The creative mind is less an inventor than an architect, assembling pre-existing materials into new configurations.
 
-**What this means:**
-1. Each new model unlocks new capabilities
-2. Progress happens in discrete jumps
-3. Planning must account for step changes
+> "Creativity is just connecting things. When you ask creative people how they did something, they feel a little guilty because they didn't really do it, they just saw something."  
+> — Steve Jobs
 
-## 3. The Fastest Way to Build the Future is to Use It Yourself
+## The Myth of the Eureka Moment
 
-By using Cursor to build Cursor, the team creates a powerful recursive feedback loop. This internal "dogfooding" accelerates development.`)
+We romanticize the flash of insight, the sudden revelation. But ===creativity is a process, not an event===. It's the slow accumulation of observations, the patient refinement of ideas, the disciplined practice of craft.
+
+**The truth is more mundane—and more achievable:**
+1. Show up consistently
+2. Pay attention to the world
+3. Connect disparate ideas
+4. Refine relentlessly
+
+## Embracing the Unknown
+
+Perhaps the greatest creative challenge is learning to be comfortable with uncertainty. The path from conception to completion is rarely linear. It meanders, doubles back, and sometimes leads to unexpected destinations.
+
+But therein lies the magic: ===in surrendering to the process, we often discover something far more interesting than what we initially sought===.`)
 
   const [isMarkdown, setIsMarkdown] = useState<boolean>(true)
   const [fontSize, setFontSize] = useState<number>(16)
@@ -119,6 +255,7 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
   const [fontFamily, setFontFamily] = useState<string>("Inter")
   const [headerFontFamily, setHeaderFontFamily] = useState<string>("Inter")
   const [previewOnly, setPreviewOnly] = useState<boolean>(false)
+  const [copied, setCopied] = useState<boolean>(false)
   
   // Undo/Redo history
   const [history, setHistory] = useState<string[]>([])
@@ -324,57 +461,53 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
     }
   }
 
-  const handleExport = async () => {
+  const handleExport = async (action: 'copy' | 'download' = 'copy') => {
     if (!renderRef.current) return
 
     try {
-      // Create a temporary container with exact styling for export
-      const exportContainer = document.createElement("div")
-      exportContainer.style.position = "absolute"
-      exportContainer.style.left = "-9999px"
-      exportContainer.style.top = "0"
-      exportContainer.style.width = `${width}px`
-      exportContainer.style.backgroundColor = bgColor
-      exportContainer.style.padding = `${padding}px`
-      exportContainer.style.fontFamily = FONT_FAMILIES[fontFamily as keyof typeof FONT_FAMILIES]
-      exportContainer.style.fontSize = `${fontSize}px`
-      exportContainer.style.lineHeight = lineHeight.toString()
-      exportContainer.style.color = textColor
-      exportContainer.style.boxSizing = "border-box"
-
-      // Add the processed content
-      exportContainer.innerHTML = processContent(content)
+      // Small delay to ensure everything is rendered
+      await new Promise(resolve => setTimeout(resolve, 100))
       
-      // Apply header font to all h1-h6 and strong elements
-      const headerFont = FONT_FAMILIES[headerFontFamily as keyof typeof FONT_FAMILIES]
-      const headers = exportContainer.querySelectorAll('h1, h2, h3, h4, h5, h6, strong')
-      headers.forEach((el) => {
-        (el as HTMLElement).style.fontFamily = headerFont
-      })
-
-      // Append to body temporarily
-      document.body.appendChild(exportContainer)
-
-      const canvas = await html2canvas(exportContainer, {
-        backgroundColor: bgColor,
+      // modern-screenshot options for better quality
+      const options = {
+        quality: 0.95,
         scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        width: width,
-        height: exportContainer.scrollHeight,
-        windowWidth: width,
-        windowHeight: exportContainer.scrollHeight,
-      })
+        backgroundColor: bgColor,
+        style: {
+          borderRadius: '0',
+          boxShadow: 'none',
+        }
+      }
 
-      // Remove temporary container
-      document.body.removeChild(exportContainer)
-
-      const link = document.createElement("a")
-      link.download = "highlighted-text.png"
-      link.href = canvas.toDataURL("image/png")
-      link.click()
+      if (action === 'copy') {
+        // Generate blob for clipboard
+        const blob = await domToBlob(renderRef.current, options)
+        if (blob) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                'image/png': blob
+              })
+            ])
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+          } catch (err) {
+            console.error("Failed to copy image to clipboard:", err)
+            // Fallback to download if copy fails
+            handleExport('download')
+          }
+        }
+      } else {
+        // Download
+        const dataUrl = await domToPng(renderRef.current, options)
+        const link = document.createElement("a")
+        link.download = "highlighted-text.png"
+        link.href = dataUrl
+        link.click()
+      }
     } catch (error) {
       console.error("Error exporting image:", error)
+      alert("Failed to export image. Please check the console for details.")
     }
   }
 
@@ -458,6 +591,18 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap');
         
         @font-face {
           font-family: 'Eudoxus Sans';
@@ -734,10 +879,31 @@ By using Cursor to build Cursor, the team creates a powerful recursive feedback 
                 </div>
               </div>
 
-              <div className="col-span-2">
-                <Button onClick={handleExport} className="w-full flex items-center justify-center gap-2">
+              <div className="col-span-2 space-y-2">
+                <Button 
+                  onClick={() => handleExport('copy')} 
+                  className="w-full flex items-center justify-center gap-2"
+                  variant={copied ? "outline" : "default"}
+                >
+                  {copied ? (
+                    <>
+                      <Check size={16} />
+                      Copied to Clipboard!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={16} />
+                      Copy to Clipboard
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  onClick={() => handleExport('download')} 
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2"
+                >
                   <Download size={16} />
-                  Export as PNG
+                  Download PNG
                 </Button>
               </div>
             </div>
